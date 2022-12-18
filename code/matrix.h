@@ -19,6 +19,11 @@ class Matrix{
         size_t roi_num_rows;
         size_t roi_num_cols;
     public:
+        Matrix() {
+            rows = columns = channels = 0;
+            roi_start_col = roi_num_rows = roi_start_row = roi_num_cols = 0;
+            datas = nullptr;
+        }
         Matrix(int r, int c, int ch): rows(r), columns(c), channels(ch) {
             shared_ptr<T> d(new T[r * c * ch], [](T* p) {delete[] p;});
             datas = d;
@@ -52,7 +57,24 @@ class Matrix{
             rows = x.rows;
             datas = x.datas;
             channels = x.channels;
-            (*this).setROI(x.roi_start_row, roi_start_col, roi_num_rows, roi_num_cols);
+            (*this).setROI(x.roi_start_row, roi_start_col, x.roi_num_rows, x.roi_num_cols);
+            return *this;
+        }
+        Matrix operator = (const T x[]) {
+            checkValid();
+            for (int k = 0; k < channels * roi_num_cols * roi_num_rows; k++)
+            (*this).setPosition(k, x[k]);
+            return *this;
+        }
+        Matrix operator = (const T &x) {
+            checkValid();
+            for (int k = 0; k < this->channels; k++) {
+                for (int i = 0; i < this->roi_num_rows; i++) {
+                    for (int j = 0; j < this->roi_num_cols; j++) {
+                        (*this)(k, i, j) = x;
+                    }
+                }
+            }
             return *this;
         }
         Matrix operator * (const T &x) const {
@@ -87,11 +109,11 @@ class Matrix{
         }
         T ROIpos(int channel, int row, int column) const {
             checkValid();
-            return (*this)(channel, roi_start_col + row, roi_start_col + column);
+            return (*this)(channel, roi_start_row + row, roi_start_col + column);
         }
         T& ROIpos(int channel, int row, int column) {
         //    checkValid();
-            return (*this)(channel, roi_start_col + row, roi_start_col + column);
+            return (*this)(channel, roi_start_row + row, roi_start_col + column);
         }
         bool operator == (const Matrix &x) const {
             checkValid();
@@ -132,12 +154,14 @@ class Matrix{
             checkValid();
             if (this->roi_num_cols != x.roi_num_rows || this->channels != x.channels) throw invalid_argument("not match");
             Matrix mat(this->roi_num_rows, x.roi_num_cols, this->channels);
+            mat = (x(0) - x(0));
             for (int l = 0; l < this->channels; l++)
             for (int i = 0; i < this->roi_num_rows; i++) {
                 for (int k = 0; k < this->roi_num_cols; k++) {
                     for (int j = 0; j < x.roi_num_cols; j++) {
                         (mat(l, i, j))
                         += (this->ROIpos(l, i, k)) * x.ROIpos(l, k, j);
+                    //    printf("%d %d\n", this->ROIpos(l, i, k), x.ROIpos(l, k, j));
                     }
                 }
             }
@@ -197,6 +221,7 @@ class Matrix{
                 for (int i = 0; i < this->roi_num_rows; i++) {
                     for (int j = 0; j < this->roi_num_cols; j++) {
                         (*this).ROIpos(k, i, j) = (*this).ROIpos(k, i, j) + x;
+                    //    std::cout << (*this).ROIpos(k, i, j) << '\n';
                 }
             }
             }
@@ -239,6 +264,7 @@ class Matrix{
                 for (int i = 0; i < this->roi_num_rows; i++) {
                     for (int j = 0; j < this->roi_num_cols; j++) {
                         mat(k, i, j) = (*this).ROIpos(k, i, j);
+                    //    printf("$%f %d %d\n", (*this).ROIpos(k, i, j), i, j);
                     }
                 }
             }
