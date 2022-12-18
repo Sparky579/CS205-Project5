@@ -1,4 +1,4 @@
-# CS205-Project3: A Matrix library in C++
+# CS205-Project5: A Matrix library in C++
 ___
 
 ### 项目简介：
@@ -135,9 +135,6 @@ ROI from 0 3 to 0 5
 3 0 8 5 0 7 5 2 2
 ```
 可以观察到提取出了ROI。
-![a](./images/c.png)
-Output it
-![a](./images/d.png)
 #### Case 5: 测试ROI下的比较
 代码：
 ```
@@ -154,28 +151,37 @@ cout << (mt51 == mt52);
 ```
 1
 ```
-（代表相等）
-### Part 4: Difficulties & Solutions
-
-#### 如何安全高效地存储矩阵？
-在学会指针之后，我认识到像前两次Project那样在结构体中直接存储数组是十分低效且浪费内存的。所以，这次的Project作为一个应当实用的库，采用了结构体中只存储一个$float$指针用于表示整个矩阵，再存储$rows$和$columns$变量分别表示矩阵的行和列信息。在使用矩阵中，只将一个结构体的指针传入，避免每次函数调用都赋值一遍整个结构体。当然，带有指针的结构体需要考虑内存安全的问题，库中不能不销毁局部指针，用户在局部使用完后也必须要记得使用$deleteMatrix$。
-
-#### 如何用一个指针模拟整个二维数组？
-将二维数组展开变成$rows * columns$个$float$变量，矩阵的$r$行$c$列通过计算可得就是第$r * columns + c$个变量。函数内$pos$方法就是基于此，$pos(mat, r, c)$在不出现异常的情况下返回$datas + (r * columns + c)$的地址。
-
-#### 如何实现安全的删除操作
-一开始时，该库使用的删除函数如下：
+1代表两个区域相等。
+#### Case 6: 异常处理
+代码：
 ```
-bool deleteMatrix(Matrix *mat)
-{   
-    if (mat == NULL) return 0;
-	//delete a matrix
-	//this version requires to set mat=NULL after using
-	if (mat == NULL) return;
-	if (mat->datas != NULL) free(mat->datas);
-	free(mat);
-    mat == NULL //*
-    return 1;
+try{
+    cout << mt21 * mt21;
+}catch(exception &e) {
+    cout << e.what() << '\n';
+}
+try{
+    mt21.setROI(5, 5, 9, 9);
+    cout << mt21 + 1;
+}catch(exception &e) {
+    cout << e.what() << '\n';
 }
 ```
-但是，$*$的一行被发现实际上是无用的，对一个矩阵调用该方法时会导致它指向的内容被释放，也就是成为了野指针。出现的问题就是再次误调用该指针会出现错误。原因是传入的$mat$是原$mat$的一个复制，原$mat$指针并未因为打$*$的一行而被置为$NULL$。所以将传入的类型改为矩阵指针的指针。想要删除一个矩阵指针的时候传入该指针的地址。即：```deleteMatrix(&mat)```
+输出：
+```
+not match
+roi not valid
+```
+### Part 4: Difficulties & Solutions
+
+#### 如何存储矩阵？
+在软拷贝的要求下，使用普通的指针完成内存管理是较为困难的。我们可以借助C++11自带的shared_ptr完成这个工作。shared_ptr可以记录多少个指针指向同一块区域，并且在这个值为0的时候自动回收内存。这能帮我们节省很多代码量。
+
+#### 如何实现支持不同的数据类型？
+在很多mat库中，使用了union，合并不同的数据类型。但是在C++标准下，我们有更简便的方法：类模板。我们使用类模板，然后在类中对T数据类型进行操作即可。
+
+#### 如何在类模板下实现矩阵乘法？
+是的，一个困难是矩阵乘法需要初始化一些变量为0再让它加若干个值。我采用的解决方法是：首先确保矩阵非空，这代表矩阵一定有第一个元素。然后采用```mat(0) - mat(0)```代表0元。
+
+#### 如何实现安全的删除操作
+在使用智能指针的情况下，这变得较为简单。只需要调用智能指针的reset函数，shared_ptr会在合适的时机帮我们完成内存回收。
