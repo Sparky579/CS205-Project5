@@ -86,6 +86,4 @@ int main()
     }catch(exception &e) {
         cout << e.what();
     }
-    //case 6
-    system("pause");
 }
