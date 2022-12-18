@@ -77,7 +77,7 @@ int main()
         mt51 = a;
         mt52 = b;
         mt51.setROI(0, 2, 1, 5);
-        cout << (mt51 == mt52);
+        cout << (mt51 == mt52) << '\n';
     }catch(exception &e) {
         cout << e.what();
     }
