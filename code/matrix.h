@@ -33,13 +33,21 @@ class Matrix{
             rows = x.rows;
             columns = x.columns;
             datas = x.datas;
-            (*this).setROI(x.roi_start_row, roi_start_col, roi_num_rows, roi_num_cols);
+            setROI(x.roi_start_row, x.roi_start_col, x.roi_num_rows, x.roi_num_cols);
             channels = x.channels;
         }
         void setPosition(int x, T num) {
             *(datas.get() + x) = num;
         }
-        Matrix &operator = (const Matrix &x) {
+        void checkValid() const{
+        //    printf("%d %d %d %d\n", roi_num_cols, roi_num_rows, roi_start_col, roi_start_row);
+            if (this->datas == NULL) throw invalid_argument("null pointer");
+            if (this->roi_num_cols > columns || this->roi_num_rows > rows) throw invalid_argument("roi not valid");
+            if (this->roi_num_cols < 0 || this->roi_num_rows < 0) throw invalid_argument("roi not valid");
+            if (this->roi_start_col >= columns || this->roi_start_row >= rows) throw invalid_argument("roi not valid");
+            if (this->roi_start_col < 0 || this->roi_start_row < 0) throw invalid_argument("roi not valid");
+        }
+        Matrix operator = (const Matrix &x) {
             columns = x.columns;
             rows = x.rows;
             datas = x.datas;
@@ -48,7 +56,7 @@ class Matrix{
             return *this;
         }
         Matrix operator * (const T &x) const {
-            if (this->datas == NULL) throw invalid_argument("null pointer");
+            checkValid();
             Matrix mat(this->roi_num_rows, this->roi_num_cols, this->channels);
             for (int l = 0; l < this->channels; l++)
             for (int i = 0; i < this->roi_num_rows; i++) {
@@ -58,25 +66,36 @@ class Matrix{
             }
             return mat;
         }
+        void showROI() {
+            printf("ROI from %d %d to %d %d\n", roi_start_row, roi_start_col, roi_start_row + roi_num_rows - 1, roi_start_col + roi_num_cols - 1);
+        }
         T& operator () (int channel, int row, int column) {
+        //    checkValid();//debug
             return *(datas.get() + (rows * columns * channel + row * columns + column));
         }
         T operator () (int channel, int row, int column)const {
+            checkValid();
             return *(datas.get() + (rows * columns * channel + row * columns + column));
         }
         T& operator () (int x) {
+        //    checkValid();
             return *(datas.get() + x);
         }
         T operator () (int x) const {
+            checkValid();
             return *(datas.get() + x);
         }
         T ROIpos(int channel, int row, int column) const {
+            checkValid();
             return (*this)(channel, roi_start_col + row, roi_start_col + column);
         }
         T& ROIpos(int channel, int row, int column) {
+        //    checkValid();
             return (*this)(channel, roi_start_col + row, roi_start_col + column);
         }
         bool operator == (const Matrix &x) const {
+            checkValid();
+            x.checkValid();
             if (this->roi_num_rows != x.roi_num_rows || this->roi_num_cols != x.roi_num_cols) return 0;
             if (x.datas == datas && x.roi_start_col == roi_start_col && x.roi_start_row == roi_start_row) return 1;
             for (int k = 0; k < x.channels; k++) {
@@ -103,8 +122,14 @@ class Matrix{
             roi_num_rows = roi_rows;
             roi_num_cols = roi_cols;
         }
+        void resetROI() {
+            roi_start_col = 0;
+            roi_start_row = 0;
+            roi_num_cols = columns;
+            roi_num_rows = rows;
+        }
         Matrix operator * (const Matrix &x) const {
-            if (this->datas == NULL || x.datas == NULL) throw invalid_argument("null pointer");
+            checkValid();
             if (this->roi_num_cols != x.roi_num_rows || this->channels != x.channels) throw invalid_argument("not match");
             Matrix mat(this->roi_num_rows, x.roi_num_cols, this->channels);
             for (int l = 0; l < this->channels; l++)
@@ -119,7 +144,7 @@ class Matrix{
             return mat;
         }
         Matrix operator + (const Matrix &x) const {
-            if (this->datas == NULL || x.datas == NULL) throw invalid_argument("null pointer");
+            checkValid();
             if (this->roi_num_rows != x.roi_num_rows || this->roi_num_cols != x.roi_num_cols || x.channels != channels) throw invalid_argument("not match");
             Matrix mat(this->roi_num_rows, this->roi_num_cols, this->channels);
             for (int k = 0; k < this->channels; k++) {
@@ -132,7 +157,7 @@ class Matrix{
             return mat;
         }
         Matrix operator + (const T &x) const {
-            if (this->datas == NULL) throw invalid_argument("null pointer");
+            checkValid();
             Matrix mat(this->roi_num_rows, this->roi_num_cols, this->channels);
             for (int l = 0; l < this->channels; l++)
             for (int i = 0; i < this->roi_num_rows; i++) {
@@ -143,7 +168,7 @@ class Matrix{
             return mat;
         }
         Matrix operator - (const Matrix &x) const {
-            if (this->datas == NULL || x.datas == NULL) throw invalid_argument("null pointer");
+            checkValid();
             if (this->roi_num_rows != x.roi_num_rows || this->roi_num_cols != x.roi_num_cols || x.channels != channels) throw invalid_argument("not match");
             Matrix mat(this->roi_num_rows, this->roi_num_cols, this->channels);
             for (int k = 0; k < this->channels; k++) {
@@ -156,7 +181,7 @@ class Matrix{
             return mat;
         }
         Matrix operator - (const T &x) const {
-            if (this->datas == NULL) throw invalid_argument("null pointer");
+            checkValid();
             Matrix mat(this->roi_num_rows, this->roi_num_cols, this->channels);
             for (int l = 0; l < this->channels; l++)
             for (int i = 0; i < this->roi_num_rows; i++) {
@@ -167,6 +192,7 @@ class Matrix{
             return mat;
         }
         Matrix operator += (const T &x) {
+            checkValid();
             for (int k = 0; k < this->channels; k++) {
                 for (int i = 0; i < this->roi_num_rows; i++) {
                     for (int j = 0; j < this->roi_num_cols; j++) {
@@ -177,6 +203,7 @@ class Matrix{
             return *this;
         }
         Matrix operator -= (const T &x) {
+            checkValid();
             for (int k = 0; k < this->channels; k++) {
                 for (int i = 0; i < this->roi_num_rows; i++) {
                     for (int j = 0; j < this->roi_num_cols; j++) {
@@ -186,8 +213,19 @@ class Matrix{
             }
             return *this;
         }
+        Matrix operator *= (const T &x) {
+            checkValid();
+            for (int k = 0; k < this->channels; k++) {
+                for (int i = 0; i < this->roi_num_rows; i++) {
+                    for (int j = 0; j < this->roi_num_cols; j++) {
+                        (*this).ROIpos(k, i, j) = (*this).ROIpos(k, i, j) * x;
+                }
+            }
+            }
+            return *this;
+        }
         Matrix clone () const {
-            if (this->datas == NULL) throw invalid_argument("null pointer");
+            checkValid();
             Matrix mat(this->rows, this->columns, this->channels);
             for (int i = 0; i < this->rows * this->columns * this->channels; i++) {
                 mat(i) = (*this)(i);
@@ -195,7 +233,7 @@ class Matrix{
             return mat;
         }
         Matrix ROIclone() const {
-            if (this->datas == NULL) throw invalid_argument("null pointer");
+            checkValid();
             Matrix mat(this->roi_num_rows, this->roi_num_cols, this->channels);
             for (int k = 0; k < this->channels; k++) {
                 for (int i = 0; i < this->roi_num_rows; i++) {
@@ -207,6 +245,7 @@ class Matrix{
             return mat;
         }
         friend ostream & operator <<(ostream &out, Matrix &x) {
+            x.checkValid();
             for (int i = 0; i < x.rows; i++) {
                 for (int j = 0; j < x.columns; j++) {
                     if (x.channels == 1) out << x(0, i, j);
@@ -225,6 +264,7 @@ class Matrix{
             return out;
         }
         friend ostream & operator <<(ostream &out, Matrix &&x) {
+            x.checkValid();
             for (int i = 0; i < x.rows; i++) {
                 for (int j = 0; j < x.columns; j++) {
                     if (x.channels == 1) out << x(0, i, j);
