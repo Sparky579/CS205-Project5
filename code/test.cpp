@@ -51,11 +51,6 @@ int main()
     catch(exception &e) {
         cout << e.what();
     }
-    Matrix<double> mt1(3, 3, 1);
-    for (int i = 0; i < 9; i++) {
-        mt1.setPosition(i, i);
-        // printf("\n%f\n", mt1(3));
-    }
     //case 4
     try{
         cout << "Case 4:\n";
@@ -85,5 +80,18 @@ int main()
         cout << (mt51 == mt52);
     }catch(exception &e) {
         cout << e.what();
+    }
+    //case 6
+    cout << "Case 6:\n";
+    try{
+        cout << mt21 * mt21;
+    }catch(exception &e) {
+        cout << e.what() << '\n';
+    }
+    try{
+        mt21.setROI(5, 5, 9, 9);
+        cout << mt21 + 1;
+    }catch(exception &e) {
+        cout << e.what() << '\n';
     }
 }
